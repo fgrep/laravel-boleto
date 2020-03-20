@@ -1,12 +1,14 @@
 <?php
 namespace Eduardokum\LaravelBoleto\Cnab\Remessa;
 
-use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
-use Eduardokum\LaravelBoleto\Contracts\Pessoa as PessoaContract;
+use Carbon\Carbon;
 use Eduardokum\LaravelBoleto\Util;
+use Eduardokum\LaravelBoleto\Contracts\Pessoa as PessoaContract;
+use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 
 abstract class AbstractRemessa
 {
+
     const HEADER = 'header';
     const HEADER_LOTE = 'header_lote';
     const DETALHE = 'detalhe';
@@ -28,6 +30,11 @@ abstract class AbstractRemessa
     ];
 
     /**
+     * @var array
+     */
+    protected $boletos = [];
+
+    /**
      * Código do banco
      *
      * @var string
@@ -47,7 +54,7 @@ abstract class AbstractRemessa
      * @var array
      */
     protected $aRegistros = [
-        self::HEADER => [],
+        self::HEADER  => [],
         self::DETALHE => [],
         self::TRAILER => [],
     ];
@@ -79,6 +86,12 @@ abstract class AbstractRemessa
      * @var
      */
     protected $idremessa;
+    /**
+     * A data que será informada no header da remessa
+     *
+     * @var Carbon;
+     */
+    protected $dataRemessa = null;
     /**
      * Agência
      *
@@ -122,11 +135,33 @@ abstract class AbstractRemessa
      *
      * @param array $params Parâmetros iniciais para construção do objeto
      */
-    public function __construct($params = array())
+    public function __construct($params = [])
     {
         Util::fillClass($this, $params);
     }
 
+    /**
+     * Informa a data da remessa a ser gerada
+     *
+     * @param $data
+     */
+    public function setDataRemessa($data){
+        $this->dataRemessa = $data;
+    }
+
+    /**
+     * Retorna a data da remessa a ser gerada
+     *
+     * @param $format
+     *
+     * @return string;
+     */
+    public function getDataRemessa($format){
+        if(is_null($this->dataRemessa)){
+            return Carbon::now()->format($format);
+        }
+        return $this->dataRemessa->format($format);
+    }
     /**
      * Seta os campos obrigatórios
      *
@@ -134,11 +169,12 @@ abstract class AbstractRemessa
      */
     protected function setCamposObrigatorios()
     {
-        $args = func_get_args();
+        $args                     = func_get_args();
         $this->camposObrigatorios = [];
         foreach ($args as $arg) {
             $this->addCampoObrigatorio($arg);
         }
+
         return $this;
     }
 
@@ -151,9 +187,10 @@ abstract class AbstractRemessa
     {
         $args = func_get_args();
         foreach ($args as $arg) {
-            !is_array($arg) || call_user_func_array([$this, __FUNCTION__], $arg);
-            !is_string($arg) || array_push($this->camposObrigatorios, $arg);
+            ! is_array($arg) || call_user_func_array([$this, __FUNCTION__], $arg);
+            ! is_string($arg) || array_push($this->camposObrigatorios, $arg);
         }
+
         return $this;
     }
 
@@ -204,19 +241,24 @@ abstract class AbstractRemessa
     public function setBeneficiario($beneficiario)
     {
         Util::addPessoa($this->beneficiario, $beneficiario);
+
         return $this;
     }
+
     /**
      * Define a agência
      *
      * @param  int $agencia
+     *
      * @return AbstractRemessa
      */
     public function setAgencia($agencia)
     {
         $this->agencia = (string) $agencia;
+
         return $this;
     }
+
     /**
      * Retorna a agência
      *
@@ -226,17 +268,21 @@ abstract class AbstractRemessa
     {
         return $this->agencia;
     }
+
     /**
      * Define o número da conta
      *
      * @param  int $conta
+     *
      * @return AbstractRemessa
      */
     public function setConta($conta)
     {
         $this->conta = (string) $conta;
+
         return $this;
     }
+
     /**
      * Retorna o número da conta
      *
@@ -246,17 +292,21 @@ abstract class AbstractRemessa
     {
         return $this->conta;
     }
+
     /**
      * Define o dígito verificador da conta
      *
      * @param  int $contaDv
+     *
      * @return AbstractRemessa
      */
     public function setContaDv($contaDv)
     {
-        $this->contaDv = substr($contaDv, -1);
+        $this->contaDv = substr($contaDv, - 1);
+
         return $this;
     }
+
     /**
      * Retorna o dígito verificador da conta
      *
@@ -266,21 +316,25 @@ abstract class AbstractRemessa
     {
         return $this->contaDv;
     }
+
     /**
      * Define o código da carteira (Com ou sem registro)
      *
      * @param  string $carteira
+     *
      * @return AbstractRemessa
      * @throws \Exception
      */
     public function setCarteira($carteira)
     {
-        if (!in_array($carteira, $this->getCarteiras())) {
+        if (! in_array($carteira, $this->getCarteiras())) {
             throw new \Exception("Carteira não disponível!");
         }
         $this->carteira = $carteira;
+
         return $this;
     }
+
     /**
      * Retorna o código da carteira (Com ou sem registro)
      *
@@ -290,6 +344,7 @@ abstract class AbstractRemessa
     {
         return $this->carteira;
     }
+
     /**
      * Retorna o código da carteira (Com ou sem registro)
      *
@@ -299,6 +354,7 @@ abstract class AbstractRemessa
     {
         return $this->carteira;
     }
+
     /**
      * Retorna as carteiras disponíveis para este banco
      *
@@ -308,18 +364,24 @@ abstract class AbstractRemessa
     {
         return $this->carteiras;
     }
+
     /**
      * Método que valida se o banco tem todos os campos obrigadotorios preenchidos
      *
+     * @param $messages
+     *
      * @return boolean
      */
-    public function isValid()
+    public function isValid(&$messages)
     {
         foreach ($this->camposObrigatorios as $campo) {
-            if (call_user_func([$this, 'get' . ucwords($campo)]) == '') {
+            $test = call_user_func([$this, 'get' . ucwords($campo)]);
+            if ($test === '' || is_null($test)) {
+                $messages .= "Campo $campo está em branco";
                 return false;
             }
         }
+
         return true;
     }
 
@@ -347,16 +409,6 @@ abstract class AbstractRemessa
     abstract protected function trailer();
 
     /**
-     * Função que mostra a quantidade de linhas do arquivo.
-     *
-     * @return int
-     */
-    protected function getCount()
-    {
-        return count($this->aRegistros[self::DETALHE]) + 2;
-    }
-
-    /**
      * Função para adicionar multiplos boletos.
      *
      * @param array $boletos
@@ -377,7 +429,7 @@ abstract class AbstractRemessa
      *
      * @param integer $i
      * @param integer $f
-     * @param $value
+     * @param         $value
      *
      * @return array
      * @throws \Exception
@@ -431,10 +483,11 @@ abstract class AbstractRemessa
             throw new \Exception('Classe remessa deve informar o tamanho da linha');
         }
 
-        $a = array_filter($a, 'strlen');
+        $a = array_filter($a, 'mb_strlen');
         if (count($a) != $this->tamanho_linha) {
             throw new \Exception(sprintf('$a não possui %s posições, possui: %s', $this->tamanho_linha, count($a)));
         }
+
         return implode('', $a);
     }
 
@@ -444,10 +497,7 @@ abstract class AbstractRemessa
      * @return string
      * @throws \Exception
      */
-    public function gerar()
-    {
-        throw new \Exception('Método não implementado');
-    }
+    abstract public function gerar();
 
     /**
      * Salva o arquivo no path informado
@@ -460,11 +510,11 @@ abstract class AbstractRemessa
     public function save($path)
     {
         $folder = dirname($path);
-        if (!is_dir($folder)) {
+        if (! is_dir($folder)) {
             mkdir($folder, 0777, true);
         }
 
-        if (!is_writable(dirname($path))) {
+        if (! is_writable(dirname($path))) {
             throw new \Exception('Path ' . $folder . ' não possui permissao de escrita');
         }
 
@@ -472,5 +522,22 @@ abstract class AbstractRemessa
         file_put_contents($path, $string);
 
         return $path;
+    }
+
+    /**
+     * Realiza o download da string retornada do metodo gerar
+     *
+     * @param null $filename
+     *
+     * @throws \Exception
+     */
+    public function download($filename = null)
+    {
+        if ($filename === null) {
+            $filename = 'remessa.txt';
+        }
+        header('Content-type: text/plain');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $this->gerar();
     }
 }

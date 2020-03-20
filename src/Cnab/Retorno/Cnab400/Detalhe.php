@@ -2,12 +2,18 @@
 namespace Eduardokum\LaravelBoleto\Cnab\Retorno\Cnab400;
 
 use Carbon\Carbon;
-use Eduardokum\LaravelBoleto\Contracts\Cnab\Retorno\Cnab400\Detalhe as DetalheContract;
 use Eduardokum\LaravelBoleto\MagicTrait;
+use Eduardokum\LaravelBoleto\Contracts\Cnab\Retorno\Cnab400\Detalhe as DetalheContract;
 
 class Detalhe implements DetalheContract
 {
     use MagicTrait;
+
+    /**
+     * @var string
+     */
+    protected $carteira;
+
     /**
      * @var string
      */
@@ -20,6 +26,10 @@ class Detalhe implements DetalheContract
      * @var string
      */
     protected $numeroControle;
+    /**
+     * @var string
+     */
+    protected $codigoLiquidacao;
     /**
      * @var string
      */
@@ -84,6 +94,26 @@ class Detalhe implements DetalheContract
     /**
      * @return string
      */
+    public function getCarteira()
+    {
+        return $this->carteira;
+    }
+
+    /**
+     * @param string $nossoNumero
+     *
+     * @return Detalhe
+     */
+    public function setCarteira($carteira)
+    {
+        $this->carteira = $carteira;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
     public function getNossoNumero()
     {
         return $this->nossoNumero;
@@ -137,6 +167,29 @@ class Detalhe implements DetalheContract
     public function setNumeroControle($numeroControle)
     {
         $this->numeroControle = $numeroControle;
+
+        return $this;
+    }
+
+    /**
+     * Getter for codigoLiquidacao
+     *
+     * @return string
+     */
+    public function getCodigoLiquidacao()
+    {
+        return $this->codigoLiquidacao;
+    }
+
+    /**
+     * Setter for codigoLiquidacao
+     *
+     * @param string $codigoLiquidacao
+     * @return Detalhe
+     */
+    public function setCodigoLiquidacao($codigoLiquidacao)
+    {
+        $this->codigoLiquidacao = $codigoLiquidacao;
 
         return $this;
     }
@@ -246,6 +299,26 @@ class Detalhe implements DetalheContract
 
         return $this;
     }
+
+     /**
+    * @return string
+    */
+     public function getRejeicao()
+     {
+         return $this->rejeicao;
+     }
+
+     /**
+       * @param string $ocorrenciaTipo
+       *
+       * @return Detalhe
+       */
+     public function setRejeicao($rejeicao)
+     {
+         $this->rejeicao = $rejeicao;
+
+         return $this;
+     }
 
     /**
      * @param string $format
@@ -481,7 +554,7 @@ class Detalhe implements DetalheContract
     public function setError($error)
     {
         $this->ocorrenciaTipo = self::OCORRENCIA_ERRO;
-        $this->error = $error;
+        $this->error          = $error;
 
         return $this;
     }

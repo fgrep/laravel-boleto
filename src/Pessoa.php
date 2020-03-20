@@ -2,7 +2,6 @@
 namespace Eduardokum\LaravelBoleto;
 
 use Eduardokum\LaravelBoleto\Contracts\Pessoa as PessoaContract;
-use Eduardokum\LaravelBoleto\Util;
 
 class Pessoa implements PessoaContract
 {
@@ -36,14 +35,18 @@ class Pessoa implements PessoaContract
     protected $documento;
 
     /**
-     * Cria a pessoa passando os parametros.
-     *
-     * @param $nome
-     * @param $documento
-     * @param null      $endereco
-     * @param null      $cep
-     * @param null      $cidade
-     * @param null      $uf
+     * @var boolean
+     */
+    protected $dda = false;
+
+    /**
+     * @param      $nome
+     * @param      $documento
+     * @param null $endereco
+     * @param null $bairro
+     * @param null $cep
+     * @param null $cidade
+     * @param null $uf
      *
      * @return Pessoa
      */
@@ -69,14 +72,19 @@ class Pessoa implements PessoaContract
     {
         Util::fillClass($this, $params);
     }
+
     /**
      * Define o CEP
      *
      * @param string $cep
+     *
+     * @return Pessoa
      */
     public function setCep($cep)
     {
         $this->cep = $cep;
+
+        return $this;
     }
     /**
      * Retorna o CEP
@@ -87,14 +95,20 @@ class Pessoa implements PessoaContract
     {
         return Util::maskString(Util::onlyNumbers($this->cep), '#####-###');
     }
+
     /**
      * Define a cidade
      *
      * @param string $cidade
+     *
+     * @return Pessoa
      */
     public function setCidade($cidade)
     {
         $this->cidade = $cidade;
+
+
+        return $this;
     }
     /**
      * Retorna a cidade
@@ -111,6 +125,7 @@ class Pessoa implements PessoaContract
      *
      * @param string $documento
      *
+     * @return Pessoa
      * @throws \Exception
      */
     public function setDocumento($documento)
@@ -120,6 +135,8 @@ class Pessoa implements PessoaContract
             throw new \Exception('Documento inválido');
         }
         $this->documento = $documento;
+
+        return $this;
     }
     /**
      * Retorna o documento (CPF ou CNPJ)
@@ -135,14 +152,19 @@ class Pessoa implements PessoaContract
         }
         return Util::maskString(Util::onlyNumbers($this->documento), '##.###.###/####-##');
     }
+
     /**
      * Define o endereço
      *
      * @param string $endereco
+     *
+     * @return Pessoa
      */
     public function setEndereco($endereco)
     {
         $this->endereco = $endereco;
+
+        return $this;
     }
     /**
      * Retorna o endereço
@@ -153,14 +175,19 @@ class Pessoa implements PessoaContract
     {
         return $this->endereco;
     }
+
     /**
      * Define o bairro
      *
      * @param string $bairro
+     *
+     * @return Pessoa
      */
     public function setBairro($bairro)
     {
         $this->bairro = $bairro;
+
+        return $this;
     }
     /**
      * Retorna o bairro
@@ -171,14 +198,19 @@ class Pessoa implements PessoaContract
     {
         return $this->bairro;
     }
+
     /**
      * Define o nome
      *
      * @param string $nome
+     *
+     * @return Pessoa
      */
     public function setNome($nome)
     {
         $this->nome = $nome;
+
+        return $this;
     }
     /**
      * Retorna o nome
@@ -189,14 +221,19 @@ class Pessoa implements PessoaContract
     {
         return $this->nome;
     }
+
     /**
      * Define a UF
      *
      * @param string $uf
+     *
+     * @return Pessoa
      */
     public function setUf($uf)
     {
         $this->uf = $uf;
+
+        return $this;
     }
     /**
      * Retorna a UF
@@ -251,6 +288,36 @@ class Pessoa implements PessoaContract
     }
 
     /**
+     * Retorna o endereço completo em uma única string
+     *
+     * Ex.: Rua um, 123 - Bairro Industrial - Brasília - DF - 71000-000
+     *
+     * @return string
+     */
+    public function getEnderecoCompleto()
+    {
+        $dados = array_filter(array($this->getEndereco(), $this->getBairro(), $this->getCidade(), $this->getUf(), $this->getCep()));
+        return implode(' - ', $dados);
+    }
+	
+    /**
+     * @return bool
+     */
+    public function isDda() {
+        return $this->dda;
+    }
+
+    /**
+     * @param bool $dda
+     *
+     * @return Pessoa
+     */
+    public function setDda($dda) {
+        $this->dda = $dda;
+
+        return $this;
+    }
+    /**
      * @return array
      */
     public function toArray()
@@ -265,6 +332,8 @@ class Pessoa implements PessoaContract
             'documento' => $this->getDocumento(),
             'nome_documento' => $this->getNomeDocumento(),
             'endereco2' => $this->getCepCidadeUf(),
+			'endereco_completo' => $this->getEnderecoCompleto(),
+            'dda' => $this->isDda(),
         ];
     }
 }

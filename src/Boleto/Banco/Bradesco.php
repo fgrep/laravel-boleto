@@ -2,6 +2,7 @@
 namespace Eduardokum\LaravelBoleto\Boleto\Banco;
 
 use Eduardokum\LaravelBoleto\Boleto\AbstractBoleto;
+use Eduardokum\LaravelBoleto\CalculoDV;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto as BoletoContract;
 use Eduardokum\LaravelBoleto\Contracts\Boleto\Boleto;
 use Eduardokum\LaravelBoleto\Util;
@@ -16,11 +17,11 @@ class Bradesco  extends AbstractBoleto implements BoletoContract
     protected $codigoBanco = Boleto::COD_BANCO_BRADESCO;
     /**
      * Define as carteiras disponíveis para este banco
-     * '09' => Com registro | '06' => Sem Registro | '21' => Com Registro - Pagável somente no Bradesco | '22' => Sem Registro - Pagável somente no Bradesco | '25' => Sem Registro - Emissão na Internet | '26' => Com Registro - Emissão na Internet
+     * '02' => Com registro | '09' => Com registro | '06' => Sem Registro | '21' => Com Registro - Pagável somente no Bradesco | '22' => Sem Registro - Pagável somente no Bradesco | '25' => Sem Registro - Emissão na Internet | '26' => Com Registro - Emissão na Internet
      *
      * @var array
      */
-    protected $carteiras = ['09', '06', '21', '22', '25', '26'];
+    protected $carteiras = ['02', '04', '09', '21', '26'];
     /**
      * Trata-se de código utilizado para identificar mensagens especificas ao cedente, sendo
      * que o mesmo consta no cadastro do Banco, quando não houver código cadastrado preencher
@@ -44,15 +45,46 @@ class Bradesco  extends AbstractBoleto implements BoletoContract
      * @var string
      */
     protected $especiesCodigo = [
-        'DM' => '01',
-        'NP' => '02',
-        'NS' => '03',
-        'CS' => '04',
-        'REC' => '05',
-        'LC' => '10',
-        'ND' => '11',
-        'DS' => '12',
+        'CH'  => '01', //Cheque
+        'DM'  => '02', //Duplicata Mercantil
+        'DMI' => '03', //Duplicata Mercantil p/ Indicação
+        'DS'  => '04', //Duplicata de Serviço
+        'DSI' => '05', //Duplicata de Serviço p/ Indicação
+        'DR'  => '06', //Duplicata Rural
+        'LC'  => '07', //Letra de Câmbio
+        'NCC' => '08', //Nota de Crédito Comercial
+        'NCE' => '09', //Nota de Crédito a Exportação
+        'NCI' => '10', //Nota de Crédito Industrial
+        'NCR' => '11', //Nota de Crédito Rural
+        'NP'  => '12', //Nota Promissória
+        'NPR' => '13', //Nota Promissória Rural
+        'TM'  => '14', //Triplicata Mercantil
+        'TS'  => '15', //Triplicata de Serviço
+        'NS'  => '16', //Nota de Seguro
+        'RC'  => '17', //Recibo
+        'FAT' => '18', //Fatura
+        'ND'  => '19', //Nota de Débito
+        'AP'  => '20', //Apólice de Seguro
+        'ME'  => '21', //Mensalidade Escolar
+        'PC'  => '22', //Parcela de Consórcio
+        'NF'  => '23', //Nota Fiscal
+        'DD'  => '24', //Documento de Dívida
+        'CPR' => '25', //Cédula de Produto Rural,
+        'WAR' => '26', //Warrant
+        'DAE' => '27', //Dívida Ativa do Estado
+        'DAM' => '28', //Dívida Ativa do Município
+        'DAU' => '29', //Dívida Ativa da União
+        'EC'  => '30', //Encargos condominiais
+        'CC'  => '31', //CC Cartão de Crédito,
+        'BDP' => '32', //BDP - Boleto de Proposta
+        'O'   => '99', //Outros,
     ];
+    /**
+     * Mostrar o endereço do beneficiário abaixo da razão e CNPJ na ficha de compensação
+     *
+     * @var boolean
+     */
+    protected $mostrarEnderecoFichaCompensacao = true;
     /**
      * Gera o Nosso Número.
      *
@@ -60,7 +92,8 @@ class Bradesco  extends AbstractBoleto implements BoletoContract
      */
     protected function gerarNossoNumero()
     {
-        return Util::numberFormatGeral($this->getNumero(), 11);
+        return Util::numberFormatGeral($this->getNumero(), 11)
+            . CalculoDV::bradescoNossoNumero($this->getCarteira(), $this->getNumero());
     }
 
     /**
@@ -88,9 +121,7 @@ class Bradesco  extends AbstractBoleto implements BoletoContract
      */
     public function getNossoNumeroBoleto()
     {
-        return Util::numberFormatGeral($this->getCarteira(), 2)
-        . ' / ' . $this->getNossoNumero()
-        . '-' . Util::modulo11($this->getCarteira() . $this->getNossoNumero(), 2, 7, 0, 'P');
+        return Util::numberFormatGeral($this->getCarteira(), 2) . ' / ' .  substr_replace($this->getNossoNumero(), '-', -1, 0);
     }
     /**
      * Método para gerar o código da posição de 20 a 44
@@ -102,12 +133,37 @@ class Bradesco  extends AbstractBoleto implements BoletoContract
         if ($this->campoLivre) {
             return $this->campoLivre;
         }
-        return $this->campoLivre = Util::numberFormatGeral($this->getAgencia(), 4) .
-        Util::numberFormatGeral($this->getCarteira(), 2) .
-        Util::numberFormatGeral($this->getNossoNumero(), 11) .
-        Util::numberFormatGeral($this->getConta(), 7) .
-        '0';
+
+        $campoLivre = Util::numberFormatGeral($this->getAgencia(), 4);
+        $campoLivre .= Util::numberFormatGeral($this->getCarteira(), 2);
+        $campoLivre .= Util::numberFormatGeral($this->getNumero(), 11);
+        $campoLivre .= Util::numberFormatGeral($this->getConta(), 7);
+        $campoLivre .= '0';
+
+        return $this->campoLivre = $campoLivre;
     }
+
+    /**
+     * Método onde qualquer boleto deve extender para gerar o código da posição de 20 a 44
+     *
+     * @param $campoLivre
+     *
+     * @return array
+     */
+    public static function parseCampoLivre($campoLivre) {
+        return [
+            'convenio' => null,
+            'agenciaDv' => null,
+            'contaCorrenteDv' => null,
+            'agencia' => substr($campoLivre, 0, 4),
+            'carteira' => substr($campoLivre, 4, 2),
+            'nossoNumero' => substr($campoLivre, 6, 11),
+            'nossoNumeroDv' => null,
+            'nossoNumeroFull' => substr($campoLivre, 6, 11),
+            'contaCorrente' => substr($campoLivre, 17, 7),
+        ];
+    }
+
     /**
      * Define o campo CIP do boleto
      *
@@ -120,10 +176,11 @@ class Bradesco  extends AbstractBoleto implements BoletoContract
         $this->variaveis_adicionais['cip'] = $this->getCip();
         return $this;
     }
+
     /**
      * Retorna o campo CIP do boleto
      *
-     * @return int
+     * @return string
      */
     public function getCip()
     {
